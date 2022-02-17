@@ -15,26 +15,15 @@ public class IgdbScraper
         Client = new IGDBClient(
             Configuration.GetValue<string>("IGDBSettings:TwitchClient"),
             Configuration.GetValue<string>("IGDBSettings:TwitchSecret"));
+
+        PlatForms = Configuration.GetSection("IGDBSettings:Platforms").Get<List<long>>() ?? new List<long>();
     }
 
     private GameDbContext Context { get; }
     private IConfiguration Configuration { get; }
     private IGDBClient Client { get; }
 
-    private Dictionary<long, string> PlatForms { get; } = new()
-    {
-        {24, "GBA"},
-        {20, "NDS"},
-        {4, "N64"},
-        {19, "SNES"},
-        {30, "SEGA32X"},
-        {29, "MEGADRIVE"},
-        {78, "SEGACD"},
-        {32, "SEGASATURN"},
-        {159, "NDSi"},
-        {7, "PSX"},
-        {23, "DREAMCAST"}
-    };
+    private List<long> PlatForms { get; }
 
     public async Task Scrape()
     {
@@ -48,87 +37,90 @@ public class IgdbScraper
             //    var total = await _client.QueryAsync<dynamic>("games/count", totalCountQuery);
 
             var offset = 0;
-            var platformsQuery = $"where platforms=({string.Join(",", PlatForms.Keys)});";
-            var moreResults = true;
-
-            while (moreResults)
+            if (PlatForms.Any())
             {
-                var query =
-                    $"fields id,name,url,platforms.*,release_dates.platform,artworks.*,cover.*,release_dates.*; {platformsQuery} limit 500; offset {offset};";
-                var games = await Client.QueryAsync<Game>(IGDBClient.Endpoints.Games, query);
+                var platformsQuery = $"where platforms=({string.Join(",", PlatForms)});";
+                var moreResults = true;
 
-                if (games.Any())
+                while (moreResults)
                 {
-                    offset += 500;
-                    foreach (var game in games)
+                    var query =
+                        $"fields id,name,url,platforms.*,release_dates.platform,artworks.*,cover.*,release_dates.*; {platformsQuery} limit 500; offset {offset};";
+                    var games = await Client.QueryAsync<Game>(IGDBClient.Endpoints.Games, query);
+
+                    if (games.Any())
                     {
-                        string boxImage;
-                        if (game.Cover?.Value?.ImageId != null)
-                            boxImage = await GetImageAsBase64Url(ImageHelper.GetImageUrl(game.Cover.Value.ImageId,
-                                ImageSize.CoverBig));
-                        else if (game.Artworks?.Values?.FirstOrDefault()?.ImageId != null)
-                            boxImage = await GetImageAsBase64Url(
-                                ImageHelper.GetImageUrl(game.Artworks.Values.First().ImageId, ImageSize.CoverBig));
-                        else
-                            boxImage = NoImage;
-
-                        foreach (var platform in game.Platforms.Values.Where(x => PlatForms.ContainsKey(x.Id ?? 0)))
+                        offset += 500;
+                        foreach (var game in games)
                         {
-                            var existing = Context.GameEntries.FirstOrDefault(x =>
-                                x.IgdbGameAndPlatformId.Equals($"{game.Id}:{platform.Id}"));
-                            if (existing == null)
-                            {
-                                var newGame = new GameEntry
-                                {
-                                    Name = game.Name,
-                                    ReleaseYear = game.ReleaseDates.Values
-                                        .FirstOrDefault(x => x.Platform.Id.Equals(platform.Id))?.Year ?? 0,
-                                    Languages = new List<string> {"English"},
-                                    IgdbGameAndPlatformId = $"{game.Id}:{platform.Id}",
-                                    BoxImage = boxImage,
-                                    Hardware = new List<string>(),
-                                    NoOfDisks = 1,
-                                    //HolId = holId,
-                                    Platform = platform.Name ?? "Unknown",
-                                    IgdbUrl = game.Url
-                                };
-
-                                Context.GameEntries.Add(newGame);
-                                await Context.SaveChangesAsync();
-                                Console.WriteLine(
-                                    $"Added Game Entry - {game.Name}, Platform - {platform.Name ?? "Unknown"} ");
-                            }
+                            string boxImage;
+                            if (game.Cover?.Value?.ImageId != null)
+                                boxImage = await GetImageAsBase64Url(ImageHelper.GetImageUrl(game.Cover.Value.ImageId,
+                                    ImageSize.CoverBig));
+                            else if (game.Artworks?.Values?.FirstOrDefault()?.ImageId != null)
+                                boxImage = await GetImageAsBase64Url(
+                                    ImageHelper.GetImageUrl(game.Artworks.Values.First().ImageId, ImageSize.CoverBig));
                             else
-                            {
-                                if (update)
-                                {
-                                    existing.Name = game.Name;
-                                    existing.ReleaseYear = game.ReleaseDates.Values
-                                        .FirstOrDefault(x => x.Platform.Id.Equals(platform.Id))?.Year ?? 0;
-                                    existing.Languages = new List<string> {"English"};
-                                    existing.IgdbGameAndPlatformId = $"{game.Id}:{platform.Id}";
-                                    existing.BoxImage = boxImage;
-                                    existing.Hardware = new List<string>();
-                                    existing.NoOfDisks = 1;
-                                    //HolId = holId,
-                                    existing.Platform = platform.Name ?? "Unknown";
-                                    existing.IgdbUrl = game.Url;
+                                boxImage = NoImage;
 
+                            foreach (var platform in game.Platforms.Values.Where(x => PlatForms.Contains(x.Id ?? 0)))
+                            {
+                                var existing = Context.GameEntries.FirstOrDefault(x =>
+                                    x.IgdbGameAndPlatformId.Equals($"{game.Id}:{platform.Id}"));
+                                if (existing == null)
+                                {
+                                    var newGame = new GameEntry
+                                    {
+                                        Name = game.Name,
+                                        ReleaseYear = game.ReleaseDates.Values
+                                            .FirstOrDefault(x => x.Platform.Id.Equals(platform.Id))?.Year ?? 0,
+                                        Languages = new List<string> {"English"},
+                                        IgdbGameAndPlatformId = $"{game.Id}:{platform.Id}",
+                                        BoxImage = boxImage,
+                                        Hardware = new List<string>(),
+                                        NoOfDisks = 1,
+                                        //HolId = holId,
+                                        Platform = platform.Name ?? "Unknown",
+                                        IgdbUrl = game.Url
+                                    };
+
+                                    Context.GameEntries.Add(newGame);
                                     await Context.SaveChangesAsync();
                                     Console.WriteLine(
-                                        $"Updated Game Entry - {game.Name}, Platform - {platform.Name ?? "Unknown"} ");
+                                        $"Added Game Entry - {game.Name}, Platform - {platform.Name ?? "Unknown"} ");
                                 }
                                 else
                                 {
-                                    Console.WriteLine($"{game.Id}:{platform.Id} Already processed");
+                                    if (update)
+                                    {
+                                        existing.Name = game.Name;
+                                        existing.ReleaseYear = game.ReleaseDates.Values
+                                            .FirstOrDefault(x => x.Platform.Id.Equals(platform.Id))?.Year ?? 0;
+                                        existing.Languages = new List<string> {"English"};
+                                        existing.IgdbGameAndPlatformId = $"{game.Id}:{platform.Id}";
+                                        existing.BoxImage = boxImage;
+                                        existing.Hardware = new List<string>();
+                                        existing.NoOfDisks = 1;
+                                        //HolId = holId,
+                                        existing.Platform = platform.Name ?? "Unknown";
+                                        existing.IgdbUrl = game.Url;
+
+                                        await Context.SaveChangesAsync();
+                                        Console.WriteLine(
+                                            $"Updated Game Entry - {game.Name}, Platform - {platform.Name ?? "Unknown"} ");
+                                    }
+                                    else
+                                    {
+                                        Console.WriteLine($"{game.Id}:{platform.Id} Already processed");
+                                    }
                                 }
                             }
                         }
                     }
-                }
-                else
-                {
-                    moreResults = false;
+                    else
+                    {
+                        moreResults = false;
+                    }
                 }
             }
         }
