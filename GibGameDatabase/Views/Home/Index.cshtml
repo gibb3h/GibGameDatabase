@@ -1,0 +1,124 @@
+﻿@using Kendo.Mvc.UI
+@model GameEntry
+
+@{
+    ViewData["Title"] = "Home Page";
+}
+
+<script>
+
+    function onChooseGame() {
+        kendo.ui.progress($("body"), true);
+        $.ajax({
+            type: "GET",
+            url: '@(Url.Action("SelectGame"))',
+            data: { platform: $('#selPlatform').val() },
+            success: function(data) {
+                $('#game-details').html(data);
+                kendo.ui.progress($("body"), false);
+                $('#gameModel').modal('show');
+            },
+            error: function(errorData) {}
+        });
+    }
+
+
+    function setPlayed(e) {
+        var dataItem = this.dataItem($(e.currentTarget).closest('tr'));
+        $.ajax({
+            url: '@Url.Action("SetGamePlayed")',
+            type: 'POST',
+            dataType: 'json',
+            data: { id: dataItem.Id },
+            success: function() {
+                $('#gameGrid').data('kendoGrid').dataSource.read();
+            }
+        });
+    }
+
+    function unsetPlayed(e) {
+        var dataItem = this.dataItem($(e.currentTarget).closest('tr'));
+        $.ajax({
+            url: '@Url.Action("UnsetGamePlayed")',
+            type: 'POST',
+            dataType: 'json',
+            data: { id: dataItem.Id },
+            success: function() {
+                $('#gameGrid').data('kendoGrid').dataSource.read();
+            }
+        });
+    }
+
+</script>
+<script type="text/x-kendo-template" id="template">
+    <img style="height:300px" src="#=BoxImage#">
+</script>
+<div class="text-center">
+    <div class="row justify-content-center p-2">
+        <div class="col-2">
+            @(Html.Kendo().DropDownList().Name("selPlatform")
+                .ValuePrimitive(true)
+                .DataSource(source => { source.Read(read => { read.Action("ReadPlatforms","Home"); }); }))
+        </div>
+        <div class="col-3">
+            <button class="btn-primary btn h-100" onclick="onChooseGame()">Choose Game</button>
+        </div>
+    </div>
+
+    <div style="height: 80vh; overflow: auto;">
+        @(Html.Kendo().Grid<GameEntry>()
+            .HtmlAttributes(new {style = "height:100%; background:none;"})
+            .Name("gameGrid")
+            .Columns(columns =>
+            {
+                columns.Bound(m => m.BoxImage).ClientTemplate("<div style=\"text-align:center;\"><img src=\" #= BoxImage #\" style=\"height:60px;\"\\></div>").Width("10%");
+                columns.Bound(m => m.Name).Encoded(false).ClientTemplate("<a href=\"#=Url#\" target=\"_blank\">#=Name#</a>");
+                columns.Bound(m => m.ReleaseYear);
+                columns.Bound(m => m.Platform);
+                columns.Bound(m => m.LanguagesEntries);
+                columns.Bound(m => m.DatePlayed).Format("{0:dd/MM/yyyy}");
+                columns.Command(m =>
+                {
+                    @*m.Custom("setPlayed").Text(" ").Click("setPlayed").Visible("setPlayedVisible").IconClass("k-icon k-i-check text-success");*@
+                    m.Custom("setPlayed").Text(" ").Click("setPlayed").Visible("setPlayedVisible").IconClass("psx-triangle");
+                    @*m.Custom("unsetPlayed").Text(" ").Click("unsetPlayed").Visible("unsetPlayedVisible").IconClass("k-icon k-i-close text-danger");*@
+                    m.Custom("unsetPlayed").Text(" ").Click("unsetPlayed").Visible("unsetPlayedVisible").IconClass("psx-circle");
+                }).Width("5%");
+            })
+            .Filterable(ftb => ftb.Mode(GridFilterMode.Row))
+            .Resizable(resize => resize.Columns(true))
+            .DataSource(dataSource => dataSource
+                .Ajax()
+                .Sort(s => s.Add("Name").Ascending())
+                .Filter(f =>
+                {
+                    f.Add(f2 => f2.LanguagesEntries).Contains("English");
+                    f.Add(f2 => f2.ReleaseYear).IsGreaterThan(0);
+                })
+                .PageSize(100)
+                .Model(model => { model.Id(p => p.Id); })
+                .Read(read => read.Action("ReadAllGames", "Home")
+                )
+            )
+            .Pageable()
+            .Sortable()
+            .Scrollable(scrollable => scrollable.Height("auto")))
+
+
+        @(Html.Kendo().Tooltip()
+            .For("#gameGrid")
+            .Position(TooltipPosition.Right)
+            .Filter("td:nth-child(1)")
+            .ContentHandler("showImageToolTip")
+            )
+    </div>
+    <div class="modal fade" id="gameModel" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div id="game-details" class="p-2">
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>

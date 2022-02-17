@@ -1,0 +1,31 @@
+html {
+  font-size: 14px;
+}
+
+@media (min-width: 768px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+html {
+  position: relative;
+  min-height: 100%;
+}
+
+body {
+  margin-bottom: 60px;
+}
+
+span.ticker {
+    width: 40px;
+    height: 80px;
+}
+
+.board {
+    margin:auto;
+}
+
+.k-loading-mask {
+    z-index: 99999 !important;
+}

@@ -1,0 +1,61 @@
+﻿@model GameEntry
+
+@{
+    Layout = null;
+    ViewData["Title"] = "Home Page";
+}
+
+<script>
+    function onReRoll() {
+        kendo.ui.progress($("#game-details"), true);
+        $.ajax({
+            type: "GET",
+            url: '@(Url.Action("SelectGame"))',
+            data: { platform: $('#selPlatform').val() },
+            success: function(data) {
+                kendo.ui.progress($("#game-details"), false);
+                $("#game-details").fadeOut(400,
+                    function() {
+                        $(this).html(data).fadeIn(400);
+                    });
+            },
+            error: function(errorData) {}
+        });
+    }
+</script>
+
+
+<div class="card" style="margin: auto; width: 25rem;">
+    <img class="card-img-top" src="@Model.BoxImage" alt="@Model.Name">
+    <div class="card-body">
+        <h5 class="card-title">
+            <a href="@Model.Url" target="_blank">@Model.Name</a>
+        </h5>
+    </div>
+    <ul class="list-group list-group-flush">
+        <li class="list-group-item">
+            <h5>Release Year</h5>
+            <div class="text-muted">
+                @(Model.ReleaseYear == 0 ? "UNKNOWN" : Model.ReleaseYear.ToString())
+            </div>
+        </li>
+        <li class="list-group-item">
+            <h5>Platform</h5>
+            <div class="text-muted">
+                @Model.Platform
+            </div>
+        </li>
+        @if (!string.IsNullOrEmpty(Model.HardwareEntries))
+        {
+            <li class="list-group-item">
+                <h5>Amiga Chipset</h5>
+                <div class="text-muted">
+                    @Model.HardwareEntries
+                </div>
+            </li>
+        }
+    </ul>
+    <div class="card-footer text-muted">
+        <button class="btn btn-primary" onclick="onReRoll()">Re-roll</button>
+    </div>
+</div>
