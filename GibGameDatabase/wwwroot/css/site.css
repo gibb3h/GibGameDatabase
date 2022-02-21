@@ -1,31 +1,39 @@
-html {
-  font-size: 14px;
-}
+html { font-size: 14px; }
 
 @media (min-width: 768px) {
-  html {
-    font-size: 16px;
-  }
+    html { font-size: 16px; }
 }
 
 html {
-  position: relative;
-  min-height: 100%;
+    min-height: 100%;
+    position: relative;
 }
 
-body {
-  margin-bottom: 60px;
-}
+body { margin-bottom: 60px; }
 
 span.ticker {
-    width: 40px;
     height: 80px;
+    width: 40px;
 }
 
-.board {
-    margin:auto;
+.board { margin: auto; }
+
+.k-loading-mask { z-index: 99999 !important; }
+
+.k-loading-image {
+    background-image: url('../images/loading.gif');
+    background-position: center; /* Center the image */
+    background-repeat: no-repeat; /* Do not repeat the image */
+    background-size: 25%;
+}
+#game-details .k-loading-image {
+    background-size: 50%;
+}
+.k-loading-image:before {
+    display: none;
 }
 
-.k-loading-mask {
-    z-index: 99999 !important;
+.k-loading-color {
+    background-color: #000;
+    opacity: .9;
 }

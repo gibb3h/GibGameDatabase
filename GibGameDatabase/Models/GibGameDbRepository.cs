@@ -54,7 +54,7 @@ public class GibGameDbRepository
     {
         var gameEntries = Context.GameEntries.ToList()
             .Where(x => (x.Languages.Contains("English") || !x.Languages.Any()) && x.DatePlayed == null);
-        if (!platform.Equals("ALL"))
+        if (!platform.Equals("All"))
             gameEntries = gameEntries.Where(x => x.Platform.Equals(platform));
         var game = gameEntries.ElementAt(Random.Next(gameEntries.Count()));
         return game;
