@@ -18,11 +18,11 @@ To use the HOL scraper you will need to add a file to the root directory called 
 
 you will also need to add the following to appsettings.json 
 
-"IGDBSettings": {
+`"IGDBSettings": {
     "TwitchClient": "yourTwitchClientId",
     "TwitchSecret": "yourTwitchSecret"
     "Platforms" : [] // array of platform ids from IGDB, you can get a full list from https://api.igdb.com/v4/platforms 
-  }
+  }`
   
 this is for the IGDB API and details can be seen here https://api-docs.igdb.com/#authentication
 
